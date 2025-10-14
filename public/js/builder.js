@@ -66,10 +66,9 @@ async function loadCatalogsList() {
         const catalogos = await response.json();
 
         catalogos.forEach(catalogo => {
-            // Se usa 'id' y 'nombre' que son las propiedades devueltas por el backend en /api/catalogos
-            // CRÍTICO: Aseguramos que existan antes de llamar a toUpperCase()
-            const nombre = (catalogo.nombre || 'Nombre Desconocido');
-            const id = (catalogo.id || 'ID Desconocido');
+            // CORRECCIÓN CLAVE: Usamos catalogo_id y nombre_catalogo
+            const nombre = (catalogo.nombre_catalogo || 'Nombre Desconocido');
+            const id = (catalogo.catalogo_id || 'ID Desconocido');
             const totalTelas = catalogo.totalTelas || 0;
 
             const card = document.createElement('a');
@@ -94,7 +93,13 @@ async function loadCatalogView(catalogoId, pageNumber) {
     const messageElement = document.getElementById('message');
     const slider = document.getElementById('slider');
     
-    if (messageElement) messageElement.textContent = `Cargando Catálogo: ${catalogoId}, Página ${pageNumber}...`;
+    // CRÍTICO: El catalogoId debe ser válido, si no, lanzamos un error claro
+    if (!catalogoId || catalogoId.toUpperCase() === 'UNDEFINED') {
+        if (messageElement) messageElement.textContent = 'Error: ID de Catálogo no proporcionado o es inválido.';
+        return;
+    }
+
+    if (messageElement) messageElement.textContent = `Cargando Catálogo: ${catalogoId.toUpperCase()}, Página ${pageNumber}...`;
     if (slider) slider.innerHTML = '';
 
     try {
@@ -115,6 +120,7 @@ async function loadCatalogView(catalogoId, pageNumber) {
         const totalPages = data.paginas.length;
         
         if (document.getElementById('catalog-name')) {
+            // CORRECCIÓN CLAVE: Usamos nombre_catalogo (ya estaba bien, pero se revisa)
             document.getElementById('catalog-name').textContent = data.nombre_catalogo || 'Catálogo Desconocido';
         }
         if (document.getElementById('catalog-id')) {
@@ -135,11 +141,15 @@ async function loadCatalogView(catalogoId, pageNumber) {
                 const nombreParaImagen = nombreLimpio.toUpperCase().replace(/ /g, '_'); 
                 
                 // Usamos el SKU para la URL de la vista de detalle.
+                // CRÍTICO: Si el SKU no se encontró, usamos el nombre original para la URL de búsqueda.
+                const urlSku = (skuParaBusqueda && skuParaBusqueda !== 'SKU_NO_ENCONTRADO') ? skuParaBusqueda : nombreLimpio;
+
                 return `
-                    <a href="skuView.html?sku=${skuParaBusqueda}" class="carousel-item-link">
+                    <a href="skuView.html?sku=${urlSku}" class="carousel-item-link">
                         <div class="carousel-item">
                             <h3 class="slide-title">${nombreLimpio.toUpperCase()}</h3>
-                            <p>SKU: ${skuParaBusqueda}</p> <img src="/images/${nombreParaImagen}.jpg" alt="Imagen de ${nombreLimpio}" class="slide-image">
+                            <p>SKU: ${skuParaBusqueda}</p> 
+                            <img src="/images/${nombreParaImagen}.jpg" alt="Imagen de ${nombreLimpio}" class="slide-image">
                         </div>
                     </a>
                 `;
@@ -264,6 +274,7 @@ async function loadSkuView(sku) {
         hoy.setHours(0, 0, 0, 0); 
 
         function formatInventoryDate(dateString) {
+             // Mantenemos la lógica de traducción de meses para compatibilidad
              const inventarioDate = new Date(dateString.replace(/ene/i, 'Jan').replace(/feb/i, 'Feb').replace(/mar/i, 'Mar').replace(/abr/i, 'Apr').replace(/may/i, 'May').replace(/jun/i, 'Jun').replace(/jul/i, 'Jul').replace(/ago/i, 'Aug').replace(/sep/i, 'Sep').replace(/oct/i, 'Oct').replace(/nov/i, 'Nov').replace(/dic/i, 'Dec'));
              inventarioDate.setHours(0, 0, 0, 0);
 
@@ -322,6 +333,7 @@ async function loadSkuView(sku) {
         `;
 
     } catch (error) {
+        // En caso de error, mostramos el mensaje de error del backend
         container.innerHTML = `<p class="error-message">Error: ${error.message}</p>`;
     }
 }

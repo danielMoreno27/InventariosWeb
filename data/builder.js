@@ -1,7 +1,7 @@
 module.exports = [
     {
         "catalogo_id": "CATALOGO1",
-        "nombre_catalogo": "Colección Denver",
+        "nombre_catalogo": "Primavera-Verano 2025",
         "paginas": [
             {
                 "numero_pagina": 1,
@@ -416,6 +416,34 @@ module.exports = [
                     "denver mustard",
                     "denver orange",
                     "denver olive"
+                ]
+            }
+        ]
+    },
+    {
+        "catalogo_id": "CATALOGO3",
+        "nombre_catalogo": "Colección Denver",
+        "paginas": [
+            {
+                "numero_pagina": 1,
+                "telas": [
+                    "denver navy",
+                    "denver mustard",
+                    "denver orange",
+                    "denver olive"
+                ]
+            }
+        ]
+    },
+    {
+        "catalogo_id": "CATALOGO4",
+        "nombre_catalogo": "otoño-invierno 2025",
+        "paginas": [
+            {
+                "numero_pagina": 1,
+                "telas": [
+                    "abc black",
+                    "abc charcoal"
                 ]
             }
         ]

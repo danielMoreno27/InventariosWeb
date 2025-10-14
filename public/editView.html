@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Catálogo - Admin</title>
+    <link rel="stylesheet" href="/css/styles.css"> 
+    <link rel="stylesheet" href="/css/admin.css"> </head>
+<body>
+    <div class="container admin-container">
+        <h1>🛠️ Edición de Catálogo: <span id="catalog-name-display"></span></h1>
+        <p>ID: <strong id="catalog-id-display"></strong></p>
+        
+        <div id="loading-message" class="message-info">Cargando datos...</div>
+        <div id="error-message" class="message-error" style="display: none;"></div>
+
+        <form id="edit-metadata-form" class="admin-form">
+            <h2>Metadatos</h2>
+            <div class="form-group">
+                <label for="edit-name">Nombre del Catálogo:</label>
+                <input type="text" id="edit-name" required>
+            </div>
+            <button type="submit" class="button primary-button">Guardar Nombre</button>
+        </form>
+
+        <hr>
+
+        <h2>Contenido del Catálogo (Páginas)</h2>
+        <div id="pages-container">
+            </div>
+
+        <form id="add-page-form" class="admin-form">
+            <h3>Añadir Nueva Página</h3>
+            <div class="form-group">
+                <label for="new-page-number">Número de Página:</label>
+                <input type="number" id="new-page-number" min="1" required>
+            </div>
+            <button type="submit" class="button secondary-button">Añadir Página</button>
+        </form>
+    </div>
+
+    <script src="/js/builder.js"></script> <script src="/js/admin.js"></script> <script>
+        // Lógica de inicialización para esta vista
+        document.addEventListener('DOMContentLoaded', () => {
+            const params = getUrlParams();
+            if (params.id) {
+                // Función que agregaremos a admin.js
+                loadEditView(params.id); 
+            } else {
+                document.getElementById('error-message').textContent = 'Error: ID de Catálogo no especificado.';
+                document.getElementById('error-message').style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
