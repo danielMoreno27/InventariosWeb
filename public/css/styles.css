@@ -1,0 +1,556 @@
+/* =============================================================
+   1. VARIABLES GLOBALES Y RESET
+   ============================================================= */
+
+:root {
+    /* Paleta de colores basada en el logo Altimatex */
+    --color-primary: #0C4B82; /* Azul Marino Oscuro (del logo) */
+    --color-secondary: #007bff; /* Azul de acento para enlaces/botones (más claro para contrastar) */
+    --color-text: #333;
+    --color-light-grey: #f4f4f4; /* Fondo claro para secciones */
+    --color-white: #ffffff;
+    --color-border: #ddd;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    color: var(--color-text);
+    background-color: var(--color-light-grey);
+    
+    /* CORRECCIÓN DE SOLAPAMIENTO: 
+       Aumentamos el padding-top para compensar una navbar potencialmente más alta.
+       Ajusta este valor si la altura real de tu navbar cambia.
+    */
+    padding-top: 75px; /* Un poco más de espacio para la barra rediseñada */
+}
+
+a {
+    text-decoration: none;
+    color: var(--color-secondary);
+}
+
+/* =============================================================
+   2. NAVBAR (Encabezado Fijo y Rediseñado) - ACTUALIZADO
+   ============================================================= */
+
+.navbar {
+    background-color: var(--color-primary); /* Azul Marino */
+    color: var(--color-white);
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between; /* Distribuye espacio entre los grupos */
+    align-items: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); 
+    position: fixed; 
+    top: 0; 
+    width: 100%; 
+    z-index: 1000; 
+    flex-wrap: wrap; /* Permitir que los elementos se envuelvan en pantallas pequeñas */
+    gap: 15px; /* Espacio entre los bloques principales del navbar */
+}
+
+.navbar-brand h1 {
+    font-size: 1.6em; /* Ligeramente más grande */
+    font-weight: 600;
+    margin: 0;
+    color: var(--color-white);
+    white-space: nowrap; /* Evita que el título se rompa en varias líneas */
+}
+
+.navbar-links {
+    display: flex;
+    gap: 20px; /* Espacio entre los enlaces */
+    flex-grow: 1; /* Permite que los enlaces ocupen el espacio disponible */
+    justify-content: flex-start; /* Alinea los enlaces al inicio (junto al logo) */
+}
+
+.navbar-links a {
+    color: var(--color-white);
+    padding: 5px 0;
+    transition: color 0.3s;
+    font-size: 1.1em;
+    font-weight: 500;
+    white-space: nowrap; /* Evita que los enlaces se rompan */
+}
+
+.navbar-links a:hover {
+    color: var(--color-secondary); /* Resalta con el azul de acento */
+}
+
+.navbar-search {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.navbar-search input[type="search"] {
+    padding: 8px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.3); /* Borde más sutil */
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.1); /* Fondo ligeramente transparente */
+    color: var(--color-white);
+    font-size: 0.95em;
+    width: 180px; /* Ancho fijo en desktop */
+    transition: background-color 0.3s, border-color 0.3s;
+}
+
+.navbar-search input[type="search"]::placeholder {
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.navbar-search input[type="search"]:focus {
+    background-color: var(--color-white);
+    color: var(--color-text);
+    border-color: var(--color-secondary);
+    outline: none;
+}
+
+.navbar-search button {
+    padding: 8px 15px;
+    background-color: var(--color-secondary); /* Botón con el color de acento */
+    color: var(--color-white);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.95em;
+    transition: background-color 0.3s;
+}
+
+.navbar-search button:hover {
+    background-color: #0056b3; /* Un tono más oscuro del azul de acento */
+}
+
+
+/* =============================================================
+   3. CONTENEDOR PRINCIPAL
+   ============================================================= */
+
+.container {
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 0 15px;
+    padding-top: 10px; /* Padding adicional para el contenido */
+}
+
+h2, h3 {
+    color: var(--color-primary);
+    margin-bottom: 15px;
+    border-bottom: 2px solid var(--color-secondary); 
+    padding-bottom: 5px;
+    font-weight: 500; 
+}
+
+h2 {
+    font-size: 1.8em; 
+}
+
+h3 {
+    font-size: 1.4em; 
+}
+
+/* =============================================================
+   4. BÚSQUEDA Y MENSAJES (Formulario de la página principal)
+   ============================================================= */
+/* Este formulario es el que va en index.html, no en el navbar */
+.search-form { 
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.search-form input[type="search"] {
+    flex-grow: 1;
+    padding: 10px;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    font-size: 1em;
+}
+
+.search-form button {
+    padding: 10px 15px;
+    background-color: var(--color-primary);
+    color: var(--color-white);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.search-form button:hover {
+    background-color: var(--color-secondary); 
+}
+
+.error-message, .loading-message {
+    color: #dc3545;
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    padding: 10px;
+    border-radius: 4px;
+    margin-top: 20px;
+}
+
+/* =============================================================
+   5. VISTA DE CATÁLOGOS (catalogsListView.html)
+   ============================================================= */
+
+.catalog-card {
+    display: block;
+    background-color: var(--color-white);
+    padding: 20px;
+    margin-bottom: 15px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+    color: var(--color-text);
+}
+
+.catalog-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.catalog-card h3 {
+    color: var(--color-primary);
+    border-bottom: none;
+    margin-bottom: 8px;
+    font-size: 1.5em;
+}
+
+.catalog-card p {
+    font-size: 0.9em;
+    color: #666;
+    margin: 3px 0;
+}
+
+/* =============================================================
+   6. PAGINACIÓN
+   ============================================================= */
+
+.pagination {
+    margin: 20px 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap; 
+    gap: 5px;
+}
+
+.pagination-btn, .pagination-link {
+    text-decoration: none;
+    padding: 8px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    color: var(--color-secondary);
+    transition: background-color 0.3s;
+    font-size: 14px;
+}
+
+.pagination-btn:hover, .pagination-link:not(.active):hover {
+    background-color: var(--color-light-grey);
+}
+
+.pagination-link.active {
+    background-color: var(--color-secondary);
+    color: var(--color-white);
+    border-color: var(--color-secondary);
+    font-weight: bold;
+    cursor: default;
+}
+
+.pagination-dots {
+    padding: 8px 4px;
+    color: #777;
+    font-size: 14px;
+}
+
+/* =============================================================
+   7. SLIDER/CAROUSEL
+   ============================================================= */
+
+.slider-container {
+    overflow: hidden; 
+    width: 100%;
+    margin-bottom: 30px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.slider {
+    display: flex;
+    transition: transform 0.5s ease-in-out;
+    width: 100%;
+}
+
+.carousel-item-link {
+    min-width: 100%; 
+    text-decoration: none; 
+    color: inherit; 
+    cursor: pointer;
+}
+
+.carousel-item {
+    min-width: 100%;
+    box-sizing: border-box;
+    padding: 30px;
+    background-color: var(--color-white);
+    text-align: center;
+    min-height: 450px; 
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.carousel-item-link:hover .carousel-item {
+    background-color: #f0f8ff; 
+}
+
+.slide-title {
+    color: var(--color-primary);
+    margin-bottom: 15px;
+    text-transform: capitalize;
+    font-size: 1.6em;
+}
+
+.slide-image {
+    max-width: 90%; 
+    max-height: 250px;
+    height: auto;
+    border: 1px solid var(--color-border);
+    margin-top: 15px;
+    object-fit: contain;
+    border-radius: 4px;
+}
+
+.slider-controls {
+    display: flex;
+    justify-content: center;
+    margin-top: 15px;
+    gap: 15px;
+}
+
+.slider-controls button {
+    padding: 10px 15px;
+    background-color: var(--color-secondary);
+    color: var(--color-white);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1em;
+    width: 40px;
+    height: 40px;
+    transition: background-color 0.3s;
+}
+
+.slider-controls button:hover {
+    background-color: var(--color-primary);
+}
+
+/* =============================================================
+   8. VISTA SKU (skuView.html)
+   ============================================================= */
+
+.sku-details-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.article-info {
+    border: 1px solid var(--color-border);
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    background-color: var(--color-white);
+}
+
+.article-info h2 {
+    margin-top: 0;
+    font-size: 1.4em;
+    color: var(--color-primary);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.article-info p {
+    margin: 8px 0;
+    font-size: 1.05em;
+}
+
+.article-info strong {
+    color: var(--color-text);
+}
+
+.sku-image {
+    max-width: 400px;
+    height: auto;
+    border: 2px solid var(--color-primary); 
+    margin: 20px auto;
+    cursor: pointer;
+    transition: opacity 0.3s;
+    object-fit: contain;
+    border-radius: 8px;
+    display: block; 
+}
+
+.sku-image:hover {
+    opacity: 0.9;
+}
+
+hr {
+    border: 0;
+    height: 1px;
+    background: var(--color-border);
+    margin: 30px 0;
+}
+
+.inventory-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    background-color: var(--color-white);
+    border-radius: 8px;
+    overflow: hidden; 
+}
+
+.inventory-table th, .inventory-table td {
+    border: 1px solid var(--color-border);
+    padding: 12px;
+    text-align: left;
+    font-size: 0.95em;
+}
+
+.inventory-table th {
+    background-color: var(--color-primary);
+    color: var(--color-white);
+    font-weight: 600;
+}
+
+.inventory-table tr:nth-child(even) {
+    background-color: var(--color-light-grey);
+}
+
+.status-almacen {
+    font-weight: bold;
+    color: #28a745; 
+    background-color: #d4edda;
+    text-align: center !important;
+}
+
+/* =============================================================
+   9. MEDIA QUERIES (Responsividad) - ACTUALIZADO
+   ============================================================= */
+
+@media (max-width: 768px) {
+    /* Ajustes para tabletas */
+    .navbar {
+        flex-direction: row; /* Mantener horizontal en tablets */
+        justify-content: space-between;
+        gap: 10px;
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
+    .navbar-brand h1 {
+        font-size: 1.4em;
+    }
+
+    .navbar-links {
+        flex-grow: 0; /* No expandir tanto */
+        order: initial; /* Volver al orden normal */
+        gap: 10px;
+    }
+
+    .navbar-links a {
+        font-size: 1em;
+    }
+
+    .navbar-search {
+        order: initial;
+        flex-grow: 1; /* Permite que la barra de búsqueda ocupe más espacio */
+        justify-content: flex-end; /* Alinea a la derecha */
+    }
+
+    .navbar-search input[type="search"] {
+        width: 140px; /* Ancho ajustado para tablets */
+        font-size: 0.9em;
+    }
+
+    .navbar-search button {
+        padding: 8px 10px;
+        font-size: 0.9em;
+    }
+
+    /* Otras secciones */
+    .catalog-card {
+        padding: 15px;
+    }
+    .slide-title {
+        font-size: 1.4em;
+    }
+    .sku-image {
+        max-width: 100%;
+    }
+    .inventory-table-wrapper {
+        overflow-x: auto; /* Habilita el scroll horizontal para tablas */
+    }
+    .inventory-table {
+        min-width: 600px; 
+    }
+}
+
+@media (max-width: 600px) {
+    /* Ajustes para móviles pequeños */
+    body {
+        padding-top: 140px; /* Más padding para acomodar navbar de 2 líneas */
+    }
+
+    .navbar {
+        flex-direction: column; /* Apila los elementos */
+        align-items: flex-start;
+        padding-bottom: 10px; /* Espacio extra abajo */
+    }
+
+    .navbar-brand {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+
+    .navbar-brand h1 {
+        font-size: 1.5em; /* Vuelve a un tamaño decente */
+    }
+
+    .navbar-links {
+        width: 100%;
+        justify-content: space-around; /* Distribuye los enlaces uniformemente */
+        gap: 0; /* Elimina el gap entre enlaces en móvil */
+        margin-bottom: 10px;
+    }
+
+    .navbar-links a {
+        padding: 5px 0;
+        font-size: 1em;
+    }
+
+    .navbar-search {
+        width: 100%; /* Ocupa todo el ancho disponible */
+        justify-content: center; /* Centra el buscador */
+        margin-top: 5px; /* Espacio superior */
+    }
+
+    .navbar-search input[type="search"] {
+        width: calc(100% - 70px); /* Deja espacio para el botón */
+        max-width: 250px; /* Evita que sea demasiado grande */
+    }
+
+    .navbar-search button {
+        width: 60px; /* Ancho fijo para el botón */
+        font-size: 0.9em;
+    }
+}

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventario Altimatex - Inicio</title>
+    <link rel="stylesheet" href="css/styles.css"> 
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Bienvenido al Sistema de Inventario</h1>
+        <p>Utiliza la barra de búsqueda superior para consultar el stock de un SKU específico o navega a la sección de Catálogos.</p>
+
+        <section class="quick-links">
+            <h2>Acceso Rápido</h2>
+            <a href="catalogsListView.html" class="link-card">
+                <i class="fas fa-list-alt"></i>
+                Lista de Catálogos
+            </a>
+            <div class="link-card" onclick="alert('Usa el buscador para consultar SKU.')">
+                <i class="fas fa-box-open"></i>
+                Consulta Rápida de Stock
+            </div>
+        </section>
+    </div>
+
+    <script src="js/builder.js"></script> 
+</body>
+</html>

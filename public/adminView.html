@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel de Administración de Catálogos - Altimatex</title>
+    <link rel="stylesheet" href="css/styles.css"> </head>
+<body>
+    <header class="navbar">
+        <h1>Admin Catálogos</h1>
+        <a href="index.html">Volver a Inventario</a>
+    </header>
+
+    <main class="container">
+        <h2>Crear Nuevo Catálogo</h2>
+        <form id="create-form">
+            <input type="text" id="new-id" placeholder="ID del Catálogo (ej: CATALOGO04)" required>
+            <input type="text" id="new-name" placeholder="Nombre (ej: Colección Verano)" required>
+            <button type="submit">Crear</button>
+        </form>
+
+        <hr>
+
+        <h2>Catálogos Existentes</h2>
+        <div id="catalog-list">Cargando...</div>
+    </main>
+    
+    <script src="js/admin.js"></script> 
+</body>
+</html>
