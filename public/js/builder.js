@@ -293,7 +293,7 @@ async function loadSkuView(sku) {
         container.innerHTML = `
             <div class="sku-details-header">
                 <a href="/images/${nombreImagen}.jpg" target="_blank">
-                    <img src="/images/${nombreImagen}.jpg" alt="Imagen de ${telaColor}" class="sku-image">
+                    <img src="/images/${nombreImagen}.JPG" alt="Imagen de ${telaColor}" class="sku-image">
                 </a>
             </div>
             
