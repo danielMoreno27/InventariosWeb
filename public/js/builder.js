@@ -138,7 +138,10 @@ async function loadCatalogView(catalogoId, pageNumber) {
                 // CRÍTICO: Usamos telaObj.sku para la búsqueda y telaObj.nombre para la presentación
                 const nombreLimpio = telaObj.nombre || 'Desconocido';
                 const skuParaBusqueda = telaObj.sku; // Ya está limpio y en mayúsculas desde el backend
-                const nombreParaImagen = nombreLimpio.toUpperCase().replace(/ /g, '_'); 
+                const nombreParaImagen = nombreLimpio
+                    .toUpperCase()                  // 1. Convertir todo a MAYÚSCULAS
+                    .replace(/\s+/g, '_')           // 2. Reemplaza uno o más espacios por un guion bajo
+                    .replace(/[^A-Z0-9_]/g, '_')    // 3. ELIMINA CUALQUIER CARACTER QUE NO SEA LETRA MAYÚSCULA, NÚMERO O GUION BAJO
                 
                 // Usamos el SKU para la URL de la vista de detalle.
                 // CRÍTICO: Si el SKU no se encontró, usamos el nombre original para la URL de búsqueda.
