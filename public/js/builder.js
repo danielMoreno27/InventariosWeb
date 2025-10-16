@@ -270,7 +270,10 @@ async function loadSkuView(sku) {
         
         const primerArticulo = data;
         const telaColor = primerArticulo.telacolor || 'Desconocido';
-        const nombreImagen = telaColor.toUpperCase().replace(/ /g, '_'); 
+        const nombreImagen = nombreLimpio
+            .toUpperCase()                  // 1. Convertir todo a MAYÚSCULAS
+            .replace(/\s+/g, '_')           // 2. Reemplaza uno o más espacios por un guion bajo
+            .replace(/[^A-Z0-9_]/g, '_')    // 3. ELIMINA CUALQUIER CARACTER QUE NO SEA LETRA MAYÚSCULA, NÚMERO O GUION BAJO
         
         // --- Lógica de fecha (Se mantiene) ---
         const hoy = new Date();
