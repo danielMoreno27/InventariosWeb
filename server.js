@@ -5,7 +5,21 @@ const mongoose = require('mongoose');
 const path = require('path');
 const fs = require('fs'); 
 const Catalog = require('./models/Catalog');
-require('dotenv').config();
+const dotenv = require('dotenv').config();
+
+let dotenvConfig = {};
+
+// Verificar si estamos en un entorno Render (donde se usa la ruta de secrets)
+if (process.env.NODE_ENV === 'production' && process.env.RENDER) {
+    // Render almacena Secret Files en /etc/secrets/<filename>
+    dotenvConfig.path = '/etc/secrets/.env';
+} else {
+    // Entorno local o de desarrollo
+    dotenvConfig.path = path.resolve(__dirname, '.env');
+}
+
+// Cargar las variables de entorno usando la ruta definida
+dotenv.config(dotenvConfig);
 
 // CRÍTICO: Asegúrate de que esta URL funcione y que tu DB esté activa.
 const DB_URI = process.env.MONGODB_URI || 'mongodb+srv://danicruz297_db_user:1Hrwu7aZArMLR7Pn@cluster0.blxed7z.mongodb.net/test?retryWrites=true&w=majority&appName=Cluster0';
