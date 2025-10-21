@@ -3,9 +3,9 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const path = require('path');
-const fs = require('fs'); 
+const fs = require('fs');
+const { config } = require('dotenv');
 const Catalog = require('./models/Catalog');
-const dotenv = require('dotenv').config();
 
 let dotenvConfig = {};
 
@@ -19,7 +19,7 @@ if (process.env.NODE_ENV === 'production' && process.env.RENDER) {
 }
 
 // Cargar las variables de entorno usando la ruta definida
-dotenv.config(dotenvConfig);
+config(dotenvConfig);
 
 // CRÍTICO: Asegúrate de que esta URL funcione y que tu DB esté activa.
 const DB_URI = process.env.MONGODB_URI || 'mongodb+srv://danicruz297_db_user:1Hrwu7aZArMLR7Pn@cluster0.blxed7z.mongodb.net/test?retryWrites=true&w=majority&appName=Cluster0';
