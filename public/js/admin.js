@@ -1,4 +1,4 @@
-// public/js/admin.js
+// public/js/admin.js - CÓDIGO CORREGIDO
 
 const API_BASE = '/api';
 const listContainer = document.getElementById('catalog-list');
@@ -263,7 +263,8 @@ document.getElementById('add-page-form')?.addEventListener('submit', async (e) =
 // 7. Función principal de guardado (llama al PUT del servidor)
 async function handleUpdate(dataToSend) {
     try {
-        const response = await fetch(`${API_BASE}/admin/catalogo/${dataToSend.catalogo_id}`, {
+        // CORRECCIÓN: Se elimina '/admin' de la URL para usar la ruta PUT correcta en server.js
+        const response = await fetch(`${API_BASE}/catalogo/${dataToSend.catalogo_id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(dataToSend)

@@ -1,9 +1,22 @@
-// server.js - Versión Corregida (Octubre 2025)
+// server.js - Versión Final (Solo MongoDB para Catálogos)
 
 const express = require('express');
+const mongoose = require('mongoose');
 const path = require('path');
 const fs = require('fs'); 
-// const fsPromises = require('fs/promises'); 
+const Catalog = require('./models/Catalog');
+require('dotenv').config();
+
+// CRÍTICO: Asegúrate de que esta URL funcione y que tu DB esté activa.
+const DB_URI = process.env.MONGODB_URI || 'mongodb+srv://danicruz297_db_user:1Hrwu7aZArMLR7Pn@cluster0.blxed7z.mongodb.net/test?retryWrites=true&w=majority&appName=Cluster0';
+
+mongoose.connect(DB_URI)
+    .then(() => console.log("[DB] Conectado exitosamente a MongoDB."))
+    .catch(err => {
+        console.error('[DB] Error de conexión a MongoDB:', err.message);
+        // Si no puedes conectarte a la DB, el servidor no debería iniciar.
+        // process.exit(1); 
+    })
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -12,65 +25,69 @@ const PORT = process.env.PORT || 3000;
 // === CONFIGURACIÓN DE ARCHIVOS Y DATOS EN MEMORIA ===
 // =======================================================
 
-// Rutas a los archivos de datos. Se usa 'path.join(__dirname, ...)' para que funcionen
-// correctamente en cualquier servidor (como Render).
 const INVENTARIO_FILE = path.join(__dirname, 'data', 'infoweb_diario_old.TXT');
-const CATALOGOS_FILE = path.join(__dirname, 'data', 'builder.js'); 
 
 let inventarioData = [];
-let catalogosData = []; 
-let telacolorToSkuMap = new Map(); // Para mapear tela/color a su SKU principal
+// SE ELIMINA: let catalogosData = []; 
+let telacolorToSkuMap = new Map();
 
 
 // =======================================================
-// === FUNCIONES DE CARGA Y GUARDADO DE DATOS ===
+// === FUNCIONES DE CARGA Y GUARDADO DE DATOS (Solo Inventario) ===
 // =======================================================
 
 function loadInventarioData() {
     try {
+        // Usamos fs/promises como en server.js o fs.readFileSync si no es asíncrono.
+        // Asumiendo que esta función es síncrona, usamos fs.readFileSync.
         const data = fs.readFileSync(INVENTARIO_FILE, 'utf8');
         const lines = data.split(/\r?\n/).filter(line => line.trim() !== '');
-    
-        inventarioData = lines.map(line => {
-            const values = line.split(',');
-            const item = {};
 
-            // 1. Campos fijos (Usamos índices para mayor seguridad)
-            const sku = (values[0] || '').trim().toUpperCase(); 
-            const clave = (values[1] || '').trim().toLowerCase(); 
-            const telacolor = (values[2] || '').trim().toLowerCase(); 
+        inventarioData = lines.map(line => {
+            // PASO 1: Dividir y LIMPIAR (trim) todos los valores de la línea
+            const values = line.split(',').map(v => (v || '').trim());
+            const item = {};
             
-            // 2. Composición y campos finales: 
+            // PASO 2: Asignar y normalizar mayúsculas/minúsculas
+            // Ahora solo necesitamos aplicar mayúsculas/minúsculas, ya están limpias de espacios.
+            const sku = (values[0] || '').toUpperCase(); // Solo a mayúsculas
+            const telacolor = (values[2] || '').toLowerCase(); // Solo a minúsculas
+            
+            // La columna 1 ('clave') también debe ir a minúsculas para la búsqueda.
+            const clave = (values[1] || '').toLowerCase();
+            
+            // Lógica para la 'composicion' y 'lastFour' (indices)
             let composicion = '';
             let lastFour = ['', '', '', ''];
-            
+
             if (values.length >= 7) { 
-                composicion = values.slice(3, values.length - 4).join(',').trim();
-                lastFour = values.slice(-4).map(v => (v || '').trim());
+                // Usar values.slice que ya son strings limpios
+                composicion = values.slice(3, values.length - 4).join(',').trim(); 
+                lastFour = values.slice(-4);
             } else if (values.length > 3) {
-                // Caso simplificado
                 composicion = values.slice(3).join(',').trim();
             }
 
-            // 3. Asignación al objeto item
+            // PASO 3: Construir el objeto
             item.sku = sku;
             item.clave = clave;
-            item.telacolor = telacolor;
+            item.telacolor = telacolor; // Ya está limpio y en minúsculas
             item.composicion = composicion;
             item.orden = lastFour[0] ? lastFour[0].toLowerCase() : '';
             item.mty = lastFour[1] || '';
             item.traslado = lastFour[2] || '';
             item.fecha = lastFour[3] || '';
-    
-            // 4. Mapeo (para catálogos)
+
+            // Mapeo (para catálogos)
+            // Esto solo se ejecuta una vez por cada tela única para obtener un SKU de ejemplo.
             if (sku.length > 0 && telacolor.length > 0 && !telacolorToSkuMap.has(telacolor)) {
                 telacolorToSkuMap.set(telacolor, sku);
             }
-    
+
             return item;
         })
         .filter(item => item.sku.length > 0); 
-    
+
         console.log(`[INIT] Inventario cargado. Total de artículos: ${inventarioData.length}`);
     } catch (error) {
         console.error(`[ERROR] No se pudo cargar el archivo de inventario (${INVENTARIO_FILE}):`, error.message);
@@ -78,107 +95,62 @@ function loadInventarioData() {
     }
 }
 
-function loadCatalogosData() {
-    try {
-        // CRÍTICO: Eliminar caché para recargar correctamente si el archivo cambia
-        if (require.cache[require.resolve(CATALOGOS_FILE)]) {
-            delete require.cache[require.resolve(CATALOGOS_FILE)];
-        }
-        const data = require(CATALOGOS_FILE);
-    
-        catalogosData = data.map(catalogo => ({
-            ...catalogo,
-            // ESTANDARIZACIÓN DE NOMBRES EN MEMORIA
-            catalogo_id: String(catalogo.catalogo_id || '').toLowerCase(), 
-            nombre_catalogo: String(catalogo.nombre_catalogo || ''),
-            paginas: catalogo.paginas.map(pagina => ({
-                ...pagina,
-                telas: (pagina.telas || []).map(telacolor => {
-                    const normalizedTelacolor = String(telacolor).trim().toLowerCase();
-                    const skuEncontrado = telacolorToSkuMap.get(normalizedTelacolor) || 'SKU_NO_ENCONTRADO';
-
-                    return {
-                        nombre: telacolor, 
-                        sku: skuEncontrado 
-                    };
-                })
-            })),
-            totalTelas: catalogo.paginas.reduce((count, pagina) => count + (pagina.telas ? pagina.telas.length : 0), 0),
-        }));
-        console.log(`[INIT] Catálogos cargados en memoria. Total: ${catalogosData.length}`);
-    } catch (error) {
-        console.error(`[ERROR] No se pudo cargar el archivo de catálogos (${CATALOGOS_FILE}):`, error.message);
-        catalogosData = [];
-    }
-}
-
-function saveCatalogosData() {
-    try {
-        // Prepara los datos para guardar en el disco, revirtiendo el mapeo de 'telas' a solo strings.
-        const dataToSave = catalogosData.map(catalogo => ({
-            catalogo_id: catalogo.catalogo_id.toUpperCase(), 
-            nombre_catalogo: catalogo.nombre_catalogo,
-            paginas: catalogo.paginas.map(pagina => ({
-                numero_pagina: pagina.numero_pagina,
-                telas: pagina.telas.map(t => t.nombre || t) // Vuelve a guardar solo el nombre
-            }))
-        }));
-
-        const jsonString = JSON.stringify(dataToSave, null, 4);
-        const fileContent = `module.exports = ${jsonString};`;
-
-        fs.writeFileSync(CATALOGOS_FILE, fileContent, 'utf8');
-
-        console.log(`[ADMIN] Catálogos guardados en ${CATALOGOS_FILE}`);
-        // Nota: La próxima solicitud a loadCatalogosData() recargará los datos si es necesario.
-        return true;
-    } catch (error) {
-        console.error(`[ERROR] No se pudo guardar el archivo de catálogos:`, error.message);
-        return false;
-    }
-}
+// SE ELIMINA: function loadCatalogosData() { ... }
+// SE ELIMINA: function saveCatalogosData() { ... }
 
 // =======================================================
 // === INICIALIZACIÓN Y MIDDLEWARE ===
 // =======================================================
 
 loadInventarioData();
-loadCatalogosData();
+// SE ELIMINA: loadCatalogosData();
 
 app.use(express.static(path.join(__dirname, 'public'))); 
 app.use(express.json()); 
 app.use(express.urlencoded({ extended: true })); 
 
 // =======================================================
-// === RUTAS DE LECTURA PÚBLICAS (API GET) ===
+// === RUTAS DE LECTURA PÚBLICAS (API GET) - USAN DB y Memoria ===
 // =======================================================
 
-// 1. Obtener lista de catálogos
-app.get('/api/catalogos', (req, res) => {
-    // CORRECCIÓN CLAVE: Devolvemos las propiedades con los nombres estandarizados
-    // para que funcionen con adminView.html y admin.js.
-    const publicCatalogos = catalogosData.map(c => ({
-        catalogo_id: c.catalogo_id || '', // ANTES: id
-        nombre_catalogo: c.nombre_catalogo || '', // ANTES: nombre
-        totalTelas: c.totalTelas
-    }));
-    res.json(publicCatalogos);
-});
-
-// 2. Obtener un catálogo específico
-app.get('/api/catalogo/:id', (req, res) => {
-    const catalogoId = req.params.id.toLowerCase();
-    const catalogo = catalogosData.find(c => c.catalogo_id === catalogoId);
-
-    if (catalogo) {
-        res.json(catalogo);
-    } else {
-        res.status(404).json({ error: 'Catálogo no encontrado.' });
+// 1. Obtener lista de catálogos (USA DB - ¡CORRECTO!)
+app.get('/api/catalogos', async (req, res) => {
+    try {
+        const catalogos = await Catalog.find({})
+            .select('catalogo_id nombre_catalogo totalTelas orden') 
+            .sort({ orden: 1, nombre_catalogo: 1 });
+    
+        res.json(catalogos);
+    } catch (error) {
+        console.error("Error al obtener la lista de catálogos:", error);
+        res.status(500).json({ error: 'Error interno del servidor al obtener catálogos.' });
     }
 });
 
-// 3. Obtener detalle de SKU/Inventario (Busca por SKU o por Telacolor)
+// 2. Obtener un catálogo específico (USA DB - ¡CORRECTO!)
+app.get('/api/catalogo/:catalogoId', async (req, res) => {
+    // Aseguramos que el ID de búsqueda esté en el mismo formato que en la DB (toUpperCase)
+    const id = req.params.catalogoId.toUpperCase(); 
+
+    try {
+        // Usamos findOne para buscar por el ID que definimos en el esquema.
+        const catalogo = await Catalog.findOne({ catalogo_id: id });
+    
+        if (!catalogo) {
+            return res.status(404).json({ error: `Catálogo con ID ${id} no encontrado.` });
+        }
+    
+        res.json(catalogo);
+    } catch (error) {
+        console.error("Error al obtener catálogo específico:", error);
+        res.status(500).json({ error: 'Error interno del servidor.' });
+    }
+});
+
+// 3. Obtener detalle de SKU/Inventario (USA MEMORIA - ¡CORRECTO!)
 app.get('/api/sku/:id', (req, res) => {
+    // ... (Tu lógica de búsqueda de inventario se mantiene intacta, lo cual es correcto)
+    
     const searchId = decodeURIComponent(req.params.id).trim();
     const isSkuSearch = searchId.includes('-') || (searchId.length > 4 && !searchId.includes(' '));
 
@@ -218,78 +190,91 @@ app.get('/api/sku/:id', (req, res) => {
 
 
 // =======================================================
-// === RUTAS DE ADMINISTRACIÓN (CRUD) ===
+// === RUTAS DE ADMINISTRACIÓN (CRUD) - AHORA SOLO DB ===
 // =======================================================
 
-// 4. CREATE (Crear Nuevo Catálogo)
-app.post('/api/admin/catalogo', (req, res) => {
+// 4. CREATE (Crear Nuevo Catálogo) - ¡USA DB AHORA!
+app.post('/api/admin/catalogo', async (req, res) => {
     const nuevoCatalogo = req.body;
-    const nuevoId = String(nuevoCatalogo.catalogo_id || '').trim().toLowerCase();
+    const nuevoId = String(nuevoCatalogo.catalogo_id || '').trim().toUpperCase(); // Usamos toUpperCase por el schema
 
     if (!nuevoId) {
         return res.status(400).json({ error: 'El campo catalogo_id es obligatorio.' });
     }
 
-    if (catalogosData.some(c => c.catalogo_id === nuevoId)) {
-        return res.status(409).json({ error: `El catálogo con ID '${nuevoId}' ya existe.` });
-    }
+    // Calcular el total de telas para el campo 'totalTelas' en la DB
+    const totalTelasCalculado = (nuevoCatalogo.paginas || []).reduce((count, pagina) => count + (pagina.telas ? pagina.telas.length : 0), 0);
 
-    const catalogoAAnadir = {
+    const catalogoAAnadir = new Catalog({
         catalogo_id: nuevoId,
         nombre_catalogo: nuevoCatalogo.nombre_catalogo || 'Nuevo Catálogo',
         paginas: nuevoCatalogo.paginas || [],
-    };
+        totalTelas: totalTelasCalculado
+    });
 
-    catalogosData.push(catalogoAAnadir); 
-    if (saveCatalogosData()) {
-        res.status(201).json({ message: 'Catálogo creado exitosamente.', catalogo: catalogoAAnadir });
-    } else {
-        res.status(500).json({ error: 'Error al guardar los datos en el disco.' });
+    try {
+        // Guardar en MongoDB. El error de duplicado (409) se maneja aquí.
+        const savedCatalog = await catalogoAAnadir.save();
+        res.status(201).json({ message: 'Catálogo creado exitosamente en la DB.', catalogo: savedCatalog });
+
+    } catch (error) {
+        // Manejo de error de duplicado o validación
+        if (error.code === 11000) { // Código de error de duplicado de MongoDB
+            return res.status(409).json({ error: `El catálogo con ID '${nuevoId}' ya existe.` });
+        }
+        console.error("Error al crear catálogo en DB:", error);
+        res.status(500).json({ error: 'Error al crear el catálogo en la base de datos.', details: error.message });
     }
 });
 
 
-// 5. UPDATE (Actualizar Catálogo Existente)
-app.put('/api/admin/catalogo/:id', (req, res) => {
-    const idToUpdate = req.params.id.trim().toLowerCase();
-    const updates = req.body;
-
-    const index = catalogosData.findIndex(c => c.catalogo_id === idToUpdate);
-
-    if (index === -1) {
-        return res.status(404).json({ error: `Catálogo con ID '${idToUpdate}' no encontrado.` });
+// 5. UPDATE (Actualizar Catálogo Existente) - ¡USA DB AHORA!
+// Esta ruta ya estaba bien, la dejamos igual.
+app.put('/api/catalogo/:catalogoId', async (req, res) => {
+    const id = req.params.catalogoId.toUpperCase();
+    const newData = req.body;
+    
+    // Recalcular totalTelas si se envían nuevas páginas
+    if (newData.paginas) {
+        newData.totalTelas = newData.paginas.reduce((count, pagina) => count + (pagina.telas ? pagina.telas.length : 0), 0);
     }
 
-    if (updates.nombre_catalogo) {
-        catalogosData[index].nombre_catalogo = updates.nombre_catalogo;
-    }
-    if (updates.paginas) {
-        catalogosData[index].paginas = updates.paginas;
-    }
+    try {
+        const updatedCatalog = await Catalog.findOneAndUpdate(
+            { catalogo_id: id },
+            newData,
+            { new: true, runValidators: true }
+        );
 
-    if (saveCatalogosData()) {
-        res.json({ message: 'Catálogo actualizado exitosamente.', catalogo: catalogosData[index] });
-    } else {
-        res.status(500).json({ error: 'Error al guardar los datos en el disco.' });
+        if (!updatedCatalog) {
+            return res.status(404).json({ error: `Catálogo con ID ${id} no encontrado para actualizar.` });
+        }
+        
+        res.json({ message: 'Catálogo actualizado exitosamente y guardado en la DB.', data: updatedCatalog });
+
+    } catch (error) {
+        console.error("Error al actualizar catálogo:", error);
+        res.status(500).json({ error: 'Error al actualizar el catálogo en la base de datos.' });
     }
 });
 
 
-// 6. DELETE (Eliminar Catálogo)
-app.delete('/api/admin/catalogo/:id', (req, res) => {
-    const idToDelete = req.params.id.trim().toLowerCase();
+// 6. DELETE (Eliminar Catálogo) - ¡USA DB AHORA!
+app.delete('/api/admin/catalogo/:id', async (req, res) => {
+    const idToDelete = req.params.id.trim().toUpperCase(); // Usamos toUpperCase para la DB
 
-    const initialLength = catalogosData.length;
-    catalogosData = catalogosData.filter(c => c.catalogo_id !== idToDelete);
+    try {
+        const result = await Catalog.deleteOne({ catalogo_id: idToDelete });
 
-    if (catalogosData.length === initialLength) {
-        return res.status(404).json({ error: `Catálogo con ID '${idToDelete}' no encontrado.` });
-    }
+        if (result.deletedCount === 0) {
+            return res.status(404).json({ error: `Catálogo con ID '${idToDelete}' no encontrado.` });
+        }
 
-    if (saveCatalogosData()) {
-        res.json({ message: 'Catálogo eliminado exitosamente.' });
-    } else {
-        res.status(500).json({ error: 'Error al guardar los datos en el disco después de la eliminación.' });
+        res.json({ message: 'Catálogo eliminado exitosamente de la DB.' });
+
+    } catch (error) {
+        console.error("Error al eliminar catálogo de la DB:", error);
+        res.status(500).json({ error: 'Error al eliminar el catálogo de la base de datos.' });
     }
 });
 
