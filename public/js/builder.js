@@ -20,16 +20,16 @@ async function loadNavbar() {
         if (response.ok) {
             const navHtml = await response.text();
             document.body.insertAdjacentHTML('afterbegin', navHtml);
-            
+
             // Lógica para el formulario de búsqueda en el navbar
             const searchFormNav = document.getElementById('search-form-nav');
             if (searchFormNav) {
-                searchFormNav.addEventListener('submit', function(e) {
+                searchFormNav.addEventListener('submit', function (e) {
                     e.preventDefault();
                     const skuInput = document.getElementById('sku-input-nav');
                     if (skuInput && skuInput.value.trim()) {
-                         // Enviamos el valor como 'sku' (puede ser SKU o telacolor)
-                         window.location.href = `skuView.html?sku=${skuInput.value.trim()}`;
+                        // Enviamos el valor como 'sku' (puede ser SKU o telacolor)
+                        window.location.href = `skuView.html?sku=${skuInput.value.trim()}`;
                     }
                 });
             }
@@ -57,12 +57,12 @@ async function loadCatalogsList() {
 
     try {
         const response = await fetch('/api/catalogos');
-        
+
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({ error: `Error HTTP ${response.status}` }));
             throw new Error(errorData.error || `No se pudo conectar con el servidor (Estado: ${response.status}).`);
         }
-        
+
         const catalogos = await response.json();
 
         catalogos.forEach(catalogo => {
@@ -73,9 +73,9 @@ async function loadCatalogsList() {
 
             const card = document.createElement('a');
             card.className = 'catalog-card';
-            card.href = `catalogsView.html?id=${id}&page=1`; 
+            card.href = `catalogsView.html?id=${id}&page=1`;
             // Usamos toUpperCase aquí para la presentación en la tarjeta
-            card.innerHTML = `<h3>${nombre.toUpperCase()}</h3><p>ID: ${id.toUpperCase()}</p><p>Total Telas: ${totalTelas}</p>`; 
+            card.innerHTML = `<h3>${nombre.toUpperCase()}</h3><p>ID: ${id.toUpperCase()}</p><p>Total Telas: ${totalTelas}</p>`;
             container.appendChild(card);
         });
 
@@ -92,7 +92,7 @@ async function loadCatalogsList() {
 async function loadCatalogView(catalogoId, pageNumber) {
     const messageElement = document.getElementById('message');
     const slider = document.getElementById('slider');
-    
+
     // CRÍTICO: El catalogoId debe ser válido, si no, lanzamos un error claro
     if (!catalogoId || catalogoId.toUpperCase() === 'UNDEFINED') {
         if (messageElement) messageElement.textContent = 'Error: ID de Catálogo no proporcionado o es inválido.';
@@ -109,57 +109,66 @@ async function loadCatalogView(catalogoId, pageNumber) {
         const data = await response.json();
 
         if (!response.ok) throw new Error(data.error || `Error HTTP: ${response.status}`);
-        
+
         // Buscamos la página específica en la respuesta del servidor
         const pagina = data.paginas.find(p => p.numero_pagina === pageNumber);
-        
+
         if (!pagina) {
-             throw new Error(`Página ${pageNumber} no encontrada para este catálogo.`);
+            throw new Error(`Página ${pageNumber} no encontrada para este catálogo.`);
         }
 
         const totalPages = data.paginas.length;
-        
+
         if (document.getElementById('catalog-name')) {
-            // CORRECCIÓN CLAVE: Usamos nombre_catalogo (ya estaba bien, pero se revisa)
             document.getElementById('catalog-name').textContent = data.nombre_catalogo || 'Catálogo Desconocido';
         }
         if (document.getElementById('catalog-id')) {
             document.getElementById('catalog-id').textContent = `Página ${pageNumber} de ${totalPages}`;
         }
-        if (messageElement) messageElement.textContent = ''; 
+        if (messageElement) messageElement.textContent = '';
 
         renderPagination(catalogoId, pageNumber, totalPages);
 
-        const telas = pagina.telas; // Esto ahora es un array de objetos: [{nombre: 'Leonora Teal', sku: '190624-94261'}, ...]
-        
+        const telas = pagina.telas; // Esto es un array de objetos: [{nombre: 'Leonora Teal'}, ...]
+
         if (telas && telas.length > 0) {
-            slider.innerHTML = telas.map(telaObj => {
-                
-                // CRÍTICO: Usamos telaObj.sku para la búsqueda y telaObj.nombre para la presentación
-                const nombreLimpio = telaObj.nombre || 'Desconocido';
-                const skuParaBusqueda = telaObj.sku; // Ya está limpio y en mayúsculas desde el backend
+            // --- 1. Crear un array de promesas para buscar todos los SKUs ---
+            const telaPromises = telas.map(async telaObj => {
+                // ✅ CORRECCIÓN CLAVE: Usamos 'nombre', ya que es el campo en el catálogo
+                const nombreLimpio = telaObj.nombre || 'Desconocido'; 
+
+                // 2. LLAMADA ASÍNCRONA: Obtener el SKU real del inventario
+                const sku = await getSkuByTelaColor(nombreLimpio);
+
+                // 3. Lógica de limpieza de nombre para la IMAGEN (Lógica más robusta)
                 const nombreParaImagen = nombreLimpio
-                    .toUpperCase()                  // 1. Convertir todo a MAYÚSCULAS
-                    .replace(/\s+/g, '_')           // 2. Reemplaza uno o más espacios por un guion bajo
-                    .replace(/[^A-Z0-9_]/g, '_')    // 3. ELIMINA CUALQUIER CARACTER QUE NO SEA LETRA MAYÚSCULA, NÚMERO O GUION BAJO
-                
-                // Usamos el SKU para la URL de la vista de detalle.
-                // CRÍTICO: Si el SKU no se encontró, usamos el nombre original para la URL de búsqueda.
-                const urlSku = (skuParaBusqueda && skuParaBusqueda !== 'SKU_NO_ENCONTRADO') ? skuParaBusqueda : nombreLimpio;
+                    .toUpperCase()
+                    .replace(/[\s\/\\]+/g, '_') // Reemplaza ESPACIOS, DIAGONALES y CONTRADIAGONALES por guion bajo
+                    .replace(/[^A-Z0-9_]/g, '') // Elimina cualquier otro caracter especial (deja solo A-Z, 0-9, _)
+                    .replace(/_+/g, '_');        // Consolida múltiples guiones bajos a uno solo
+
+                // Usamos el SKU para la URL de la vista de detalle. Si no hay SKU, usamos el nombre de la tela.
+                // El valor 'sku' en el link de la URL se codifica automáticamente por el navegador
+                const urlSku = (sku && sku !== 'N/A') ? sku : nombreLimpio; 
 
                 return `
-                    <a href="skuView.html?sku=${urlSku}" class="carousel-item-link">
-                        <div class="carousel-item">
-                            <h3 class="slide-title">${nombreLimpio.toUpperCase()}</h3>
-                            <p>SKU: ${skuParaBusqueda}</p> 
-                            <img src="/images/${nombreParaImagen}.JPG" alt="Imagen de ${nombreLimpio}" class="slide-image">
-                        </div>
-                    </a>
+                <a href="skuView.html?sku=${urlSku}" class="carousel-item-link">
+                    <div class="carousel-item">
+                        <h3 class="slide-title">${nombreLimpio.toUpperCase()}</h3>
+                        <p>SKU: ${sku}</p> 
+                        <img src="/images/${nombreParaImagen}.JPG" alt="Imagen de ${nombreLimpio}" class="slide-image">
+                    </div>
+                </a>
                 `;
-            }).join('');
-            
-            handleSlider(telas.length);
+            });
 
+            // 4. Esperar a que TODAS las promesas se resuelvan
+            const telasHtml = await Promise.all(telaPromises);
+
+            // 5. Inyectar el HTML resultante
+            slider.innerHTML = telasHtml.join('');
+
+            handleSlider(telas.length);
         } else {
             if (slider) slider.innerHTML = `<div class="carousel-item"><p>No se encontraron telas en la página ${pageNumber}.</p></div>`;
             const controls = document.getElementById('slider-controls');
@@ -175,7 +184,7 @@ async function loadCatalogView(catalogoId, pageNumber) {
 function renderPagination(catalogoId, currentPage, totalPages) {
     const paginationContainer = document.getElementById('pagination');
     let html = '';
-    const rangeSize = 5; 
+    const rangeSize = 5;
 
     if (currentPage > 1) {
         html += `<a href="catalogsView.html?id=${catalogoId}&page=${currentPage - 1}" class="pagination-btn">Anterior</a>`;
@@ -191,7 +200,7 @@ function renderPagination(catalogoId, currentPage, totalPages) {
             startPage = Math.max(1, totalPages - rangeSize + 1);
         }
     }
-    
+
     if (startPage > 1) {
         html += `<a href="catalogsView.html?id=${catalogoId}&page=1" class="pagination-link">1</a>`;
         if (startPage > 2) {
@@ -203,7 +212,7 @@ function renderPagination(catalogoId, currentPage, totalPages) {
         const activeClass = i === currentPage ? 'pagination-link active' : 'pagination-link';
         html += `<a href="catalogsView.html?id=${catalogoId}&page=${i}" class="${activeClass}">${i}</a>`;
     }
-    
+
     if (endPage < totalPages) {
         if (endPage < totalPages - 1) {
             html += `<span class="pagination-dots">...</span>`;
@@ -226,13 +235,13 @@ function handleSlider(numSlides) {
     const prevBtn = document.getElementById('prevBtn');
     const nextBtn = document.getElementById('nextBtn');
     const controls = document.getElementById('slider-controls');
-    
+
     if (numSlides <= 1 || !slider) {
         if (controls) controls.style.display = 'none';
         return;
     }
 
-    let slideIndex = 0; 
+    let slideIndex = 0;
 
     function updateSliderPosition() {
         slider.style.transform = `translateX(-${slideIndex * 100}%)`;
@@ -240,7 +249,7 @@ function handleSlider(numSlides) {
 
     if (prevBtn) prevBtn.onclick = () => { if (slideIndex > 0) { slideIndex--; updateSliderPosition(); } };
     if (nextBtn) nextBtn.onclick = () => { if (slideIndex < numSlides - 1) { slideIndex++; updateSliderPosition(); } };
-    
+
     if (controls) controls.style.display = 'flex';
 }
 
@@ -252,49 +261,54 @@ async function loadSkuView(sku) {
     if (!container || !title) return;
 
     // CRÍTICO: Aseguramos que sku no sea undefined/null antes de llamar a toUpperCase()
-    title.textContent = `Detalle de Artículo: ${(sku || '').toUpperCase()}`; 
+    title.textContent = `Detalle de Artículo: ${(sku || '').toUpperCase()}`;
     container.innerHTML = 'Cargando...';
 
     try {
-        // La URL envía el valor tal cual (SKU o telacolor)
-        const url = `/api/sku/${sku}`; 
-        const response = await fetch(url);
+        // 🛑 CRÍTICO: CODIFICAMOS el SKU/Tela para evitar que los caracteres especiales rompan la URL del fetch
+        const encodedSku = encodeURIComponent(sku);
+        const url = `/api/sku/${encodedSku}`;
         
+        const response = await fetch(url);
+
         if (!response.ok) {
             // Capturamos el mensaje de error del backend
             const errorData = await response.json().catch(() => ({ error: `Error HTTP ${response.status}` }));
             throw new Error(errorData.error || `Error desconocido al buscar el SKU/Tela: ${sku}`);
         }
-        
-        const data = await response.json(); 
-        
+
+        const data = await response.json();
+
         const primerArticulo = data;
         const telaColor = primerArticulo.telacolor || 'Desconocido';
-        const nombreImagen = telaColor
-            .toUpperCase()                  // 1. Convertir todo a MAYÚSCULAS
-            .replace(/\s+/g, '_')           // 2. Reemplaza uno o más espacios por un guion bajo
-            .replace(/[^A-Z0-9_]/g, '_')    // 3. ELIMINA CUALQUIER CARACTER QUE NO SEA LETRA MAYÚSCULA, NÚMERO O GUION BAJO
         
+        // 🖼️ CORRECCIÓN DE IMAGEN: Aplicamos la lógica robusta para el nombre de archivo
+        const nombreImagen = telaColor
+            .toUpperCase()                  
+            .replace(/[\s\/\\]+/g, '_')     // Reemplaza ESPACIOS, DIAGONALES y CONTRADIAGONALES por guion bajo
+            .replace(/[^A-Z0-9_]/g, '')     // Elimina cualquier otro caracter especial (deja solo A-Z, 0-9, _)
+            .replace(/_+/g, '_');          // Consolida múltiples guiones bajos a uno solo
+
         // --- Lógica de fecha (Se mantiene) ---
         const hoy = new Date();
-        hoy.setHours(0, 0, 0, 0); 
+        hoy.setHours(0, 0, 0, 0);
 
         function formatInventoryDate(dateString) {
-             // Mantenemos la lógica de traducción de meses para compatibilidad
-             const inventarioDate = new Date(dateString.replace(/ene/i, 'Jan').replace(/feb/i, 'Feb').replace(/mar/i, 'Mar').replace(/abr/i, 'Apr').replace(/may/i, 'May').replace(/jun/i, 'Jun').replace(/jul/i, 'Jul').replace(/ago/i, 'Aug').replace(/sep/i, 'Sep').replace(/oct/i, 'Oct').replace(/nov/i, 'Nov').replace(/dic/i, 'Dec'));
-             inventarioDate.setHours(0, 0, 0, 0);
+            // Mantenemos la lógica de traducción de meses para compatibilidad
+            const inventarioDate = new Date(dateString.replace(/ene/i, 'Jan').replace(/feb/i, 'Feb').replace(/mar/i, 'Mar').replace(/abr/i, 'Apr').replace(/may/i, 'May').replace(/jun/i, 'Jun').replace(/jul/i, 'Jul').replace(/ago/i, 'Aug').replace(/sep/i, 'Sep').replace(/oct/i, 'Oct').replace(/nov/i, 'Nov').replace(/dic/i, 'Dec'));
+            inventarioDate.setHours(0, 0, 0, 0);
 
-             if (isNaN(inventarioDate)) {
-                 return `<td>${dateString}</td>`;
-             }
-             
-             if (inventarioDate < hoy) {
-                 return `<td class="status-almacen">En Almacen</td>`;
-             } else {
-                 return `<td>${dateString}</td>`;
-             }
+            if (isNaN(inventarioDate)) {
+                return `<td>${dateString}</td>`;
+            }
+
+            if (inventarioDate < hoy) {
+                return `<td class="status-almacen">En Almacen</td>`;
+            } else {
+                return `<td>${dateString}</td>`;
+            }
         }
-        
+
         // --- Generación del HTML ---
         container.innerHTML = `
             <div class="sku-details-header">
@@ -348,37 +362,60 @@ async function loadSkuView(sku) {
 // --- Lógica de Inicialización (Entry Point) ---
 
 document.addEventListener('DOMContentLoaded', () => {
-    loadNavbar(); 
-    
+    loadNavbar();
+
     const path = window.location.pathname;
-    
+
     if (path.includes('catalogsListView.html')) {
         loadCatalogsList();
     } else if (path.includes('catalogsView.html')) {
         const params = getUrlParams();
         if (params.id) {
-            loadCatalogView(params.id, parseInt(params.page, 10) || 1); 
+            loadCatalogView(params.id, parseInt(params.page, 10) || 1);
         }
     } else if (path.includes('skuView.html')) {
         const params = getUrlParams();
         if (params.sku) {
             // El parámetro 'sku' puede ser un SKU real o un telacolor
-            loadSkuView(params.sku); 
+            loadSkuView(params.sku);
         } else {
-             const resultsDiv = document.getElementById('sku-results');
-             if (resultsDiv) resultsDiv.innerHTML = '<p>Introduce un SKU o nombre de Tela para buscar.</p>';
+            const resultsDiv = document.getElementById('sku-results');
+            if (resultsDiv) resultsDiv.innerHTML = '<p>Introduce un SKU o nombre de Tela para buscar.</p>';
         }
     }
-    
+
     // Lógica para el formulario de búsqueda en la página principal (index.html, etc.)
     const searchForm = document.getElementById('search-form-main');
     if (searchForm) {
-        searchForm.addEventListener('submit', function(e) {
+        searchForm.addEventListener('submit', function (e) {
             e.preventDefault();
             const skuInput = document.getElementById('sku-input-main');
             if (skuInput && skuInput.value.trim()) {
-                 window.location.href = `skuView.html?sku=${skuInput.value.trim()}`;
+                window.location.href = `skuView.html?sku=${skuInput.value.trim()}`;
             }
         });
     }
 });
+
+// NUEVA FUNCIÓN: Llama a la ruta API para obtener el SKU por el nombre de la tela
+async function getSkuByTelaColor(telacolor) {
+    if (!telacolor) return 'N/A';
+
+    const encodedTelaColor = encodeURIComponent(telacolor);
+
+    try {
+        // Llama a la nueva ruta que creamos en server.js
+        const response = await fetch(`/api/catalogo/sku-by-telacolor/${encodedTelaColor}`);
+
+        if (response.ok) {
+            const data = await response.json();
+            return data.sku || 'N/A';
+        } else {
+            // Si el backend no tiene un SKU para esa tela, devolvemos el nombre de la tela como fallback
+            return 'N/A';
+        }
+    } catch (error) {
+        console.error(`Error al buscar SKU para ${telacolor}:`, error);
+        return 'N/A';
+    }
+}

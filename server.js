@@ -180,7 +180,7 @@ app.get('/api/sku/:id', (req, res) => {
     if (!detail) {
         const normalizedTelacolor = searchId.toLowerCase(); 
         detail = inventarioData.find(item => 
-            (item.telacolor && item.telacolor.trim() === normalizedTelacolor)
+            (item.telacolor && item.telacolor === normalizedTelacolor)
         );
     }
 
@@ -200,6 +200,25 @@ app.get('/api/sku/:id', (req, res) => {
     };
 
     res.json(response);
+});
+
+// 4. Obtener el SKU de la tela a partir del nombre (USA MEMORIA - ¡NUEVO!)
+// Útil para la vista de catálogos donde solo tenemos el nombre de la tela.
+app.get('/api/catalogo/sku-by-telacolor/:telacolor', (req, res) => {
+    const busqueda = req.params.telacolor;
+    
+    // Normalizar la entrada del usuario (igual que se almacena en el mapa)
+    const telaColorLimpia = busqueda.trim().toLowerCase(); 
+    
+    // Buscar el SKU en el mapa generado al cargar el inventario
+    const skuEncontrado = telacolorToSkuMap.get(telaColorLimpia);
+    
+    if (skuEncontrado) {
+        res.json({ sku: skuEncontrado });
+    } else {
+        // Devuelve 404 si no encuentra el SKU.
+        res.status(404).json({ error: `SKU no encontrado para la tela: ${busqueda}` });
+    }
 });
 
 
