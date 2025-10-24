@@ -127,14 +127,14 @@ async function loadCatalogView(catalogoId, pageNumber) {
         }
         if (messageElement) messageElement.textContent = '';
 
-        renderPagination(catalogoId, pageNumber, totalPages);
+        renderPagination(catalogoId, pageNumber, totalPages, currentRangeStart);
 
         const telas = pagina.telas; // Esto es un array de objetos: [{nombre: 'Leonora Teal'}, ...]
 
         if (telas && telas.length > 0) {
             // --- 1. Crear un array de promesas para buscar todos los SKUs ---
             const telaPromises = telas.map(async telaObj => {
-                // ✅ CORRECCIÓN CLAVE: Usamos 'nombre', ya que es el campo en el catálogo
+                // CORRECCIÓN CLAVE: Usamos 'nombre', ya que es el campo en el catálogo
                 const nombreLimpio = telaObj.nombre || 'Desconocido'; 
 
                 // 2. LLAMADA ASÍNCRONA: Obtener el SKU real del inventario
@@ -145,7 +145,7 @@ async function loadCatalogView(catalogoId, pageNumber) {
                     .toUpperCase()
                     .replace(/[\s\/\\]+/g, '_') // Reemplaza ESPACIOS, DIAGONALES y CONTRADIAGONALES por guion bajo
                     .replace(/[^A-Z0-9_]/g, '') // Elimina cualquier otro caracter especial (deja solo A-Z, 0-9, _)
-                    .replace(/_+/g, '_');        // Consolida múltiples guiones bajos a uno solo
+                    .replace(/_+/g, '_'); // Consolida múltiples guiones bajos a uno solo
 
                 // Usamos el SKU para la URL de la vista de detalle. Si no hay SKU, usamos el nombre de la tela.
                 // El valor 'sku' en el link de la URL se codifica automáticamente por el navegador
@@ -180,27 +180,50 @@ async function loadCatalogView(catalogoId, pageNumber) {
     }
 }
 
-// Función de Renderizado de Paginación (Se mantiene)
-function renderPagination(catalogoId, currentPage, totalPages) {
+// Almacenamos el estado global de la paginación activa para la manipulación
+let currentRangeStart = 1; // La primera página visible en el carrusel
+const rangeSize = 5;
+
+// ====================================================================
+// FUNCIÓN PRINCIPAL DE PAGINACIÓN (Modificada para usar botones y lógica de rango)
+// ====================================================================
+
+function renderPagination(catalogoId, currentPage, totalPages, rangeStart = 1) {
     const paginationContainer = document.getElementById('pagination');
     let html = '';
-    const rangeSize = 5;
+    
+    if (!paginationContainer) return;
+    
+    // 1. Establecer el inicio del rango global
+    currentRangeStart = rangeStart; 
 
-    if (currentPage > 1) {
-        html += `<a href="catalogsView.html?id=${catalogoId}&page=${currentPage - 1}" class="pagination-btn">Anterior</a>`;
+    // 2. Calcular los límites visibles del carrusel (el rango de 5 números)
+    let startPage = currentRangeStart;
+    let endPage = Math.min(totalPages, currentRangeStart + rangeSize - 1);
+
+    // Ajustamos el rango si el final se queda corto al inicio (Ej. Total 30, estamos en rango 26-30)
+    if (endPage === totalPages && endPage - startPage + 1 < rangeSize) {
+        startPage = Math.max(1, totalPages - rangeSize + 1);
     }
 
-    let startPage = Math.max(1, currentPage - Math.floor(rangeSize / 2));
-    let endPage = Math.min(totalPages, currentPage + Math.floor(rangeSize / 2));
-
-    if (endPage - startPage + 1 < rangeSize) {
-        if (startPage === 1) {
-            endPage = Math.min(totalPages, startPage + rangeSize - 1);
-        } else if (endPage === totalPages) {
-            startPage = Math.max(1, totalPages - rangeSize + 1);
-        }
+    // ----------------------------------------------------
+    // BOTÓN DE DESPLAZAMIENTO IZQUIERDA (<)
+    // ----------------------------------------------------
+    // Solo se muestra si el rango visible no comienza en la página 1
+    if (currentRangeStart > 1) {
+        // Asignamos la función JS 'shiftPagination' al evento onclick
+        html += `<button type="button" class="pagination-btn" onclick="shiftPagination('${catalogoId}', ${currentPage}, ${totalPages}, -${rangeSize})">&lt;</button>`;
+    } else {
+        // Botón Deshabilitado si estamos en el inicio
+         html += `<button type="button" class="pagination-btn disabled">&lt;</button>`;
     }
 
+
+    // ----------------------------------------------------
+    // LÓGICA DE RANGO NUMÉRICO (Botones de página)
+    // ----------------------------------------------------
+
+    // Botón de Inicio (1) y puntos suspensivos
     if (startPage > 1) {
         html += `<a href="catalogsView.html?id=${catalogoId}&page=1" class="pagination-link">1</a>`;
         if (startPage > 2) {
@@ -208,26 +231,77 @@ function renderPagination(catalogoId, currentPage, totalPages) {
         }
     }
 
+    // Renderizado de las páginas dentro del rango visible
     for (let i = startPage; i <= endPage; i++) {
         const activeClass = i === currentPage ? 'pagination-link active' : 'pagination-link';
+        // CRÍTICO: El enlace sigue llevando a la página real (por eso sí refresca)
         html += `<a href="catalogsView.html?id=${catalogoId}&page=${i}" class="${activeClass}">${i}</a>`;
     }
 
+    // Botón de Fin (última página) y puntos suspensivos
     if (endPage < totalPages) {
         if (endPage < totalPages - 1) {
             html += `<span class="pagination-dots">...</span>`;
         }
-        if (endPage < totalPages) {
-            html += `<a href="catalogsView.html?id=${catalogoId}&page=${totalPages}" class="pagination-link">${totalPages}</a>`;
-        }
+        html += `<a href="catalogsView.html?id=${catalogoId}&page=${totalPages}" class="pagination-link">${totalPages}</a>`;
     }
 
-    if (currentPage < totalPages) {
-        html += `<a href="catalogsView.html?id=${catalogoId}&page=${currentPage + 1}" class="pagination-btn">Siguiente</a>`;
+
+    // ----------------------------------------------------
+    // BOTÓN DE DESPLAZAMIENTO DERECHA (>)
+    // ----------------------------------------------------
+    // Solo se muestra si el rango visible no incluye la última página
+    if (endPage < totalPages) {
+        // Asignamos la función JS 'shiftPagination' al evento onclick
+        html += `<button type="button" class="pagination-btn" onclick="shiftPagination('${catalogoId}', ${currentPage}, ${totalPages}, ${rangeSize})">&gt;</button>`;
+    } else {
+        // Botón Deshabilitado si estamos en el final
+         html += `<button type="button" class="pagination-btn disabled">&gt;</button>`;
     }
 
-    if (paginationContainer) paginationContainer.innerHTML = html;
+    paginationContainer.innerHTML = html;
 }
+
+// ====================================================================
+// NUEVA FUNCIÓN: Lógica para mover el carrusel de paginación
+// ====================================================================
+
+/**
+ * Mueve el rango visible de botones de paginación sin cambiar la página activa
+ * ni refrescar el catálogo.
+ * @param {string} catalogoId - El ID del catálogo actual.
+ * @param {number} currentPage - La página activa actualmente.
+ * @param {number} totalPages - El número total de páginas.
+ * @param {number} shift - Cuánto desplazar el rango (ej. 5 o -5).
+ */
+function shiftPagination(catalogoId, currentPage, totalPages, shift) {
+    const rangeSize = 5;
+    
+    // 1. Calcular el nuevo inicio del rango
+    // currentRangeStart es el primer número visible (ej. 1, 6, 11)
+    let newRangeStart = currentRangeStart + shift;
+
+    // 2. Aplicar límites para que el nuevo rango no se vaya fuera de 1 o TotalPages
+    
+    // Si el desplazamiento es negativo (izquierda):
+    if (shift < 0) {
+        newRangeStart = Math.max(1, newRangeStart); // Mínimo 1
+    } 
+    
+    // Si el desplazamiento es positivo (derecha):
+    if (shift > 0) {
+        // Aseguramos que el inicio del nuevo rango no exceda el límite superior
+        // (totalPages - rangeSize + 1)
+        newRangeStart = Math.min(totalPages - rangeSize + 1, newRangeStart);
+        // Si totalPages es 10 y rangeSize es 5, el rango más alto comienza en 6.
+        // Math.max con 1 es importante si totalPages < rangeSize
+        newRangeStart = Math.max(1, newRangeStart);
+    }
+    
+    // 3. Renderizar la paginación con el nuevo rango visible
+    renderPagination(catalogoId, currentPage, totalPages, newRangeStart);
+}
+
 
 // Función de Manejo del Slider (Carousel) (Se mantiene)
 function handleSlider(numSlides) {
@@ -265,7 +339,7 @@ async function loadSkuView(sku) {
     container.innerHTML = 'Cargando...';
 
     try {
-        // 🛑 CRÍTICO: CODIFICAMOS el SKU/Tela para evitar que los caracteres especiales rompan la URL del fetch
+        // CRÍTICO: CODIFICAMOS el SKU/Tela para evitar que los caracteres especiales rompan la URL del fetch
         const encodedSku = encodeURIComponent(sku);
         const url = `/api/sku/${encodedSku}`;
         
@@ -282,12 +356,12 @@ async function loadSkuView(sku) {
         const primerArticulo = data;
         const telaColor = primerArticulo.telacolor || 'Desconocido';
         
-        // 🖼️ CORRECCIÓN DE IMAGEN: Aplicamos la lógica robusta para el nombre de archivo
+        // CORRECCIÓN DE IMAGEN: Aplicamos la lógica robusta para el nombre de archivo
         const nombreImagen = telaColor
-            .toUpperCase()                  
-            .replace(/[\s\/\\]+/g, '_')     // Reemplaza ESPACIOS, DIAGONALES y CONTRADIAGONALES por guion bajo
-            .replace(/[^A-Z0-9_]/g, '')     // Elimina cualquier otro caracter especial (deja solo A-Z, 0-9, _)
-            .replace(/_+/g, '_');          // Consolida múltiples guiones bajos a uno solo
+            .toUpperCase()
+            .replace(/[\s\/\\]+/g, '_') // Reemplaza ESPACIOS, DIAGONALES y CONTRADIAGONALES por guion bajo
+            .replace(/[^A-Z0-9_]/g, '') // Elimina cualquier otro caracter especial (deja solo A-Z, 0-9, _)
+            .replace(/_+/g, '_'); // Consolida múltiples guiones bajos a uno solo
 
         // --- Lógica de fecha (Se mantiene) ---
         const hoy = new Date();

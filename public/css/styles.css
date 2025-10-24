@@ -233,23 +233,35 @@ h3 {
    6. PAGINACIÓN
    ============================================================= */
 
-.pagination {
-    margin: 20px 0;
-    display: flex;
-    justify-content: center;
+#pagination {
+    /* Flexbox es CRÍTICO para alinear los elementos */
+    display: flex; 
+    justify-content: center; /* Centra toda la barra de paginación */
     align-items: center;
-    flex-wrap: wrap; 
-    gap: 5px;
+    /* Opción: Definir un ancho fijo o máximo para el contenedor si es necesario */
+    /* max-width: 600px; */ 
+    /* margin: 20px auto; */ /* Para centrarlo horizontalmente */
 }
 
-.pagination-btn, .pagination-link {
-    text-decoration: none;
-    padding: 8px 12px;
-    border: 1px solid var(--color-border);
+.pagination-link,
+.pagination-btn {
+    /* Dar un ancho y alto fijo para que no se muevan */
+    min-width: 30px; 
+    height: 30px;
+    padding: 0 2px; /* Ajusta el padding para que el contenido quede centrado */
+    margin: 0 2px; /* Espacio fijo entre botones */
+    
+    display: flex; /* Usamos flex para centrar el texto vertical y horizontalmente */
+    justify-content: center;
+    align-items: center;
+
+    /* Estilos visuales */
+    border: 1px solid #ccc;
     border-radius: 4px;
-    color: var(--color-secondary);
-    transition: background-color 0.3s;
-    font-size: 14px;
+    background-color: #fff;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.2s; /* Pequeña transición para hacerlo más suave */
 }
 
 .pagination-btn:hover, .pagination-link:not(.active):hover {
@@ -265,9 +277,15 @@ h3 {
 }
 
 .pagination-dots {
-    padding: 8px 4px;
-    color: #777;
-    font-size: 14px;
+    /* Le damos el mismo ancho que un botón para mantener el espaciado fijo */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-width: 10px; 
+    height: 10px;
+    margin: 0 0px;
+    color: #666;
+    font-weight: bold;
 }
 
 /* =============================================================
