@@ -246,10 +246,10 @@ h3 {
 .pagination-link,
 .pagination-btn {
     /* Dar un ancho y alto fijo para que no se muevan */
-    min-width: 30px; 
-    height: 30px;
+    min-width: 35px; 
+    height: 35px;
     padding: 0 2px; /* Ajusta el padding para que el contenido quede centrado */
-    margin: 0 2px; /* Espacio fijo entre botones */
+    margin: 5px 1px; /* Espacio fijo entre botones */
     
     display: flex; /* Usamos flex para centrar el texto vertical y horizontalmente */
     justify-content: center;
