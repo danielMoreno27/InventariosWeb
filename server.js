@@ -3,6 +3,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const path = require('path');
+const fs = require('fs');
 const { config } = require('dotenv');
 // Asumo que tienes el módulo Catalog definido en './models/Catalog'
 const Catalog = require('./models/Catalog'); 
@@ -127,6 +128,33 @@ async function loadInventarioData() {
 async function initializeServer() {
     // ESPERAR: El servidor debe esperar a que el inventario se descargue de Drive
     await loadInventarioData(); 
+
+// --- NUEVA SECCIÓN: MIDDLEWARE PARA IMÁGENES CASE-INSENSITIVE ---
+    // Colocamos esto ANTES de app.use(express.static) para que intercepte las peticiones a /images
+    app.get('/images/:imageName', (req, res, next) => {
+        const requestedName = req.params.imageName;
+        const imagesDir = path.join(__dirname, 'public', 'images');
+
+        // Leemos la carpeta físicamente
+        fs.readdir(imagesDir, (err, files) => {
+            if (err) {
+                // Si hay error leyendo la carpeta, pasamos al siguiente middleware
+                return next();
+            }
+
+            // Buscamos el archivo ignorando mayúsculas/minúsculas
+            const match = files.find(f => f.toLowerCase() === requestedName.toLowerCase());
+
+            if (match) {
+                // Si lo encontramos, enviamos el archivo real (ej: si pidieron .jpg y existe .JPG)
+                res.sendFile(path.join(imagesDir, match));
+            } else {
+                // Si no existe, dejamos que Express maneje el error o pase al siguiente
+                res.status(404).send('Imagen no encontrada');
+            }
+        });
+    });
+    // ----------------------------------------------------------------    
 
     // MIDDLEWARE
     app.use(express.static(path.join(__dirname, 'public'))); 

@@ -156,7 +156,7 @@ async function loadCatalogView(catalogoId, pageNumber) {
                     <div class="carousel-item">
                         <h3 class="slide-title">${nombreLimpio.toUpperCase()}</h3>
                         <p>SKU: ${sku}</p> 
-                        <img src="/images/${nombreParaImagen}.JPG" alt="Imagen de ${nombreLimpio}" class="slide-image" onerror="if (this.src.endsWith('.JPG')) { this.src = this.src.replace('.JPG', '.jpg'); >
+                        <img src="/images/${nombreParaImagen}.JPG" alt="Imagen de ${nombreLimpio}" class="slide-image">
                     </div>
                 </a>
                 `;
